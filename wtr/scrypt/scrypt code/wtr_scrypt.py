@@ -77,6 +77,36 @@ def loginPL(browser,url,name,psw):
     control.value = psw
     return browser.submit();
 
+def findProfile(argNum):#if profile with name in 'sys.argv[argNum]' exists,
+						#set sys.argv[argNum] to profile's full path and return True
+						#else return False
+	profileName = sys.argv[argNum]
+	
+	if os.path.exists(profileName):
+		return True
+		
+	profileName = os.path.basename(profileName)
+	dirName = os.path.abspath(sys.argv[0])
+	profPath = dirName
+	prevLen = 0
+	
+	while len(dirName) != prevLen:
+		prevLen = len(dirName)
+		dirName = os.path.dirname(dirName)
+		profPath = os.path.join(dirName, os.path.join('profiles', profileName))
+		if os.path.exists(profPath):
+			sys.argv[argNum] = profPath
+			return True
+		else:
+			profPath = os.path.join(dirName, profileName)
+			if os.path.exists(profPath):
+				sys.argv[argNum] = profPath
+				return True
+				
+	
+	return False
+	
+
 def parseArgs(nextArg):
 	if len(sys.argv) < (nextArg + 1):
 		raise "ERROR: lack of arguments"
@@ -85,11 +115,11 @@ def parseArgs(nextArg):
 		if dateMatch(sys.argv[nextArg + 1]):
 			if len(sys.argv) < (nextArg + 2):
 				exit("ERROR: lack of arguments(no profile path)")
-			elif os.path.exists(sys.argv[nextArg + 2]):
+			elif findProfile(nextArg + 2):
 				return "period"
 			else:
 				exit("ERROR: wrong profile path in argument number {0}".format(nextArg + 1))
-		elif os.path.exists(sys.argv[nextArg + 1]):
+		elif findProfile(nextArg + 1):
 			return "one day"
 	else:
 		exit("ERROR: in argument number {0}".format(nextArg - 1))
@@ -301,8 +331,7 @@ def fillFewDayReport(browser):
 		dif -= 1
 		print("NEXT DAY------\n\n")
 	
-
-def registerOneDayReport(browser):
+def storeAsPrivate_Day(browser):
 	fillOneDayForm(browser)
 
 	control = browser.form.find_control("act")
@@ -311,8 +340,27 @@ def registerOneDayReport(browser):
 
 	response = browser.submit()
 
+def registerOneDayReport(browser):
+	fillOneDayForm(browser)
+
+	control = browser.form.find_control("act")
+	control.readonly = False
+	browser.form['act'] = '6'# register
+
+	response = browser.submit()
+
 def getWeek(someDate):
 	return someDate.isocalendar()[1]
+	
+def storeAsPrivate_Week(browser, firstDay, lastDay):
+		
+	fillFewDayReport(browser)	
+	
+	control = browser.form.find_control("act")
+	control.readonly = False
+	browser.form['act'] = '4'# store as private
+
+	response = browser.submit()
 
 def registerFewDayReport(browser, firstDay, lastDay):
 		
@@ -320,7 +368,7 @@ def registerFewDayReport(browser, firstDay, lastDay):
 	
 	control = browser.form.find_control("act")
 	control.readonly = False
-	browser.form['act'] = '4'# store as private
+	browser.form['act'] = '5'# register
 
 	response = browser.submit()
 
@@ -380,7 +428,20 @@ def storeAsPrivateConfirm(browser):
 	browser.form['act'] = '1'# confirm
 	
 	response = browser.submit()
-	webbrowser.open(browser.geturl())	
+	webbrowser.open(browser.geturl())
+	
+def Confirm(browser):
+	if browser.title() != "Confirmation page":
+		#print response.read()
+		exit("Confirm failed(on store as private)")
+	
+	browser.select_form(name = "confirmationStorRegDailyReportForm")
+	
+	control = browser.form.find_control("act")
+	control.readonly = False
+	browser.form['act'] = '1'# confirm
+	
+	response = browser.submit()	
 
 def dateDif(first, second):
 	return (second-first).days + 1
@@ -447,13 +508,13 @@ while nextArg < len(sys.argv):
 			exit("EXIT: Unable to include profile")
 		
 		openDayForm(br,"http://wtr-epby.office.int/worktimereport/")
-		registerOneDayReport(br)
+		storeAsPrivate_Day(br)
 
 		openDayForm(brPL,"http://wtr.ericpol.int:8080/worktimereport/myweekreports.do")
-		registerOneDayReport(brPL)
+		storeAsPrivate_Day(brPL)
 		
-		storeAsPrivateConfirm(br)
-		storeAsPrivateConfirm(brPL)
+		Confirm(br)
+		Confirm(brPL)
 		
 		nextArg = nextArg + 2
 
@@ -466,17 +527,16 @@ while nextArg < len(sys.argv):
 		
 		print "wtr.by"
 		openWeekForm(br,"http://wtr-epby.office.int/worktimereport/", getDate(wtr_date), getDate(wtr_secondDate))
-		registerFewDayReport(br, wtr_date, wtr_secondDate)
+		storeAsPrivate_Week(br, wtr_date, wtr_secondDate)
 		print "wtr.by done"
-		#http://wtr.ericpol.int:8080/worktimereport/myweekreports.do
 		
 		print "wtr.pl"
 		openWeekForm(brPL,"http://wtr.ericpol.int:8080/worktimereport/index.do", getDate(wtr_date), getDate(wtr_secondDate))
-		registerFewDayReport(brPL, wtr_date, wtr_secondDate)
+		storeAsPrivate_Week(brPL, wtr_date, wtr_secondDate)
 		print "wtr.pl done"
 		
-		storeAsPrivateConfirm(br)
-		storeAsPrivateConfirm(brPL)
+		Confirm(br)
+		Confirm(brPL)
 
 		nextArg = nextArg + 3
 		
@@ -484,14 +544,3 @@ while nextArg < len(sys.argv):
 	raw_input("Press Enter to continue")
 
 exit("All done")
-
-
-
-
-
-
-
-
-
-
-
