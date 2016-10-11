@@ -373,9 +373,6 @@ def registerOneDayReport(browser):
 	browser.form['act'] = '6'# register
 
 	response = browser.submit()
-
-def getWeek(someDate):
-	return someDate.isocalendar()[1]
 	
 def storeAsPrivate_Week(browser, firstDay, lastDay):
 		
@@ -388,7 +385,7 @@ def storeAsPrivate_Week(browser, firstDay, lastDay):
 
 	response = browser.submit()
 
-def registerFewDayReport(browser, firstDay, lastDay):
+def register_Week(browser, firstDay, lastDay):
 		
 	fillFewDayReport(browser)	
 	
@@ -397,6 +394,9 @@ def registerFewDayReport(browser, firstDay, lastDay):
 	browser.form['act'] = '5'# register
 
 	response = browser.submit()
+	
+def getWeek(someDate):
+	return someDate.isocalendar()[1]
 
 def openDayForm(browser, page):
 	browser.open(page)
@@ -442,7 +442,7 @@ def openWeekForm(browser, page, firstDay, lastDay):
 		exit('Unable to open "Edit weekly report" page')
 
 
-def storeAsPrivateConfirm(browser):
+'''def storeAsPrivateConfirm(browser):
 	if browser.title() != "Confirmation page":
 		#print response.read()
 		exit("Confirm failed(on store as private)")
@@ -454,7 +454,7 @@ def storeAsPrivateConfirm(browser):
 	browser.form['act'] = '1'# confirm
 	
 	response = browser.submit()
-	webbrowser.open(browser.geturl())
+	webbrowser.open(browser.geturl())'''
 	
 def confirm(browser):
 	if browser.title() != "Confirmation page":
@@ -496,6 +496,8 @@ wtr_date = '2016-07-28'#initialize it with todays date
 wtr_secondDate = '2016-07-29'#initialize it with todays date
 wtr_week = '2016-W34'#initialize it with current week
 ####MAKSIM LOOK UP THERE^!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+register_function
 
 if len(sys.argv) < 3:
    exit("lack of arguments( < 2)")
