@@ -43,8 +43,8 @@ def parseArgs(nextArg):#return int[0 : OK; -1 : ERROR ]
             
             if dateMatch(sys.argv[i + 1]):
                 wtr_date = sys.argv[i + 1]
-                i++
-            else raise "ERROR: -start and -end must me followed by date"
+                i += 1
+            else: raise "ERROR: -start and -end must me followed by date"
             state = State.DATES
             
         elif arg == '-end':#End date
@@ -53,13 +53,13 @@ def parseArgs(nextArg):#return int[0 : OK; -1 : ERROR ]
             
             if dateMatch(sys.argv[i + 1]):
                 wtr_date = sys.argv[i + 1]
-                i++
-            else raise "ERROR: -start and -end must me followed by date"
+                i += 1
+            else: raise "ERROR: -start and -end must me followed by date"
             state = State.DATES
             
         elif arg in ['-c', '-p', '-n']:#Relative week number(from now)
             
-            if state = State.Dates:
+            if state == State.Dates:
                 raise "ERROR: botr keys[-c | -p | -n] and dates entered" 
                 #ERROR
             
