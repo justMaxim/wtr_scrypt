@@ -32,28 +32,25 @@ def storeAsPrivate_Week(browser, firstDay, lastDay):
 def register_Week(browser, firstDay, lastDay):
 	print "Register week"   
 	
-def parseArgs(nextArg):#return int[0 : OK; -1 : ERROR ]
-    global sys
+def parseArgs(args):#return int[0 : OK; -1 : ERROR ]
     global wtr_date
     global wtr_end_date
     global wtr_profile
     
-    if len(sys.argv) < (nextArg + 1):
-        raise Exception("ERROR: lack of arguments")
     state = State.NONE
     kyeSet = Set()
     current_week = currentDate.isocalendar()[1]
 	
-    i = nextArg
-    while i < len(sys.argv):
-        arg = sys.argv[i]
+    i = 0
+    while i < len(args):
+        arg = args[i]
         print arg
         if arg == '-start':#Begin date
             if state == State.RELATIVE:
                 raise Exception("ERROR: botr keys[-c | -p | -n] and dates entered")
             
-            if dateMatch(sys.argv[i + 1]):
-                wtr_date = sys.argv[i + 1]
+            if dateMatch(args[i + 1]):
+                wtr_date = args[i + 1]
                 i += 1
             else: raise Exception("ERROR: -start and -end must me followed by date")
             state = State.DATES
@@ -62,20 +59,19 @@ def parseArgs(nextArg):#return int[0 : OK; -1 : ERROR ]
             if state == State.RELATIVE:
                 raise Exception("ERROR: botr keys[-c | -p | -n] and dates entered")
             
-            if dateMatch(sys.argv[i + 1]):
-                wtr_date = sys.argv[i + 1]
+            if dateMatch(args[i + 1]):
+                wtr_date = args[i + 1]
                 i += 1
             else: raise Exception("ERROR: -start and -end must me followed by date")
             state = State.DATES
             
         elif arg == '-profile':
-            wtr_profile = sys.argv[i + 1]#!!!!!NEEDS TO IMPLEMENT CHECKING
+            wtr_profile = args[i + 1]#!!!!!NEEDS TO IMPLEMENT CHECKING
             i += 1
         elif arg in ['-c', '-p', '-n']:#Relative week number(from now)
             
             if state == State.DATES:
                 raise Exception("ERROR: you can't enter both dates and keys -c, -n or -p")
-                #ERROR
             
             if arg in keySet:
                 raise Exception("ERROR: twise keys " + arg)
@@ -116,17 +112,10 @@ wtr_profile = ""
 registerDay = storeAsPrivate_Day
 registerWeek = storeAsPrivate_Week
 keySet = Set()
-
-class system:
-    argv = []
-
-sys = system()
 	
-sys.argv = ['-c','-p','-n','-profile', "day off"]
+args = ['-c','-p','-n','-profile', "day off"]
 
-print "fuck"
-
-parseArgs(0)
+parseArgs(args)
 
 registerDay(1)
 registerWeek(2,3,4)
@@ -134,3 +123,4 @@ registerWeek(2,3,4)
 print wtr_profile
 print Weeks
 print wtr_date + "  " + wtr_second_date
+	
