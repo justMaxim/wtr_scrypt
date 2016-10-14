@@ -5,17 +5,198 @@ import sys
 import os.path
 import webbrowser
 
+from sets import Set
+
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
 
-
 wtr_login = ""#in file login.py
 wtr_password = ""
+
+
+class State:
+    NONE = 0                             #
+    DATES = 1#start or end date entered  #
+    RELATIVE = 2#-c, -p or -n key entered#
+    ONE_DATE = 3
+    ERROR = 4
+
+def addWeek(week):
+	weekName = '%d-W%d' % (currentDate.year, week)
+	Weeks.append(weekName)
+	
+def dateMatch(date):
+	if re.match("^201\d-[01]\d-[0123]\d$", date):
+   		return True
+	else:
+		return False 
+	
+def parseArgs(args):#return State
+    global wtr_date
+    global wtr_secondDate
+    global wtr_profile
+    global currentDate
+    global kyeSet
+    global ERROR
+    
+    state = State.NONE
+    current_week = currentDate.isocalendar()[1]
+    profileFound = False
+	
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == '-start':#Begin date
+            if state == State.RELATIVE:
+            	state = State.ERROR
+                ERROR = "ERROR: botr keys[-c | -p | -n] and dates entered"
+                break
+            
+            if dateMatch(args[i + 1]):
+                wtr_date = args[i + 1]
+                i += 1
+            else:
+            	state = State.ERROR
+                ERROR = "ERROR: -start and -end must me followed by date"
+                break
+                
+            keySet.add(arg)    
+            state = State.DATES
+            
+        elif arg == '-end':#End date
+            if state == State.RELATIVE:
+                state = State.ERROR
+                ERROR = "ERROR: botr keys[-c | -p | -n] and dates entered"
+                break
+            
+            if dateMatch(args[i + 1]):
+                wtr_secondDate = args[i + 1]
+                i += 1
+            else: 
+                state = State.ERROR
+                ERROR = "ERROR: -start and -end must me followed by date"
+                break
+            keySet.add(arg)
+            state = State.DATES
+            
+        elif arg == '-profile':
+            if profileFound:
+                state = State.ERROR
+                ERROR = "ERROR: -profile key found twise"
+                break
+
+            if i + 1 >= len(args):
+                state = State.ERROR
+                ERROR = "ERROR: key -profile is not followed by profile name"
+                break
+            else:
+                wtr_profile = findProfile(args[i + 1])
+                if wtr_profile == "":
+                    state = State.ERROR
+                    ERROR = "ERROR: key -profile is followed by wrong profile name"
+                else:
+                	profileFound = True
+
+            i += 1
+        elif arg in ['-c', '-p', '-n']:#Relative week number(from now)
+            if state == State.DATES:
+                state = State.ERROR
+                ERROR = "ERROR: you can't enter both dates and keys -c, -n or -p"
+                break
+            
+            if arg in keySet:
+                state = State.ERROR
+                ERROR = "ERROR: twise keys " + arg
+                break
+
+            keySet.add(arg)
+            state = State.RELATIVE
+            if arg == '-c':
+                addWeek(current_week)
+            elif arg == '-p':
+                addWeek(current_week - 1)
+            elif arg == '-n':
+                addWeek(current_week + 1) 
+                
+        elif arg == '-x':#Confirm instead of store as private
+            if arg in keySet:
+                state = State.ERROR
+                ERROR = "ERROR: twise keys " + arg
+                break
+            
+            global registerDay
+            global registerWeek
+            registerDay = register_Day
+            registerWeek = register_Week
+		
+        elif arg == '-exactly':
+            if arg in keySet:
+                state = State.ERROR
+                ERROR = "ERROR: twise keys " + arg
+                break
+            
+            global AutoDayOFF
+            AutoDayOFF = False
+            
+        elif dateMatch(arg):
+            state = State.ERROR
+            ERROR = "ERROR: you must enter key -start or -end befor date"
+            break
+            #as we do i += 1 when hit -start or -end
+            
+        else: 
+            state = State.ERROR
+            ERROR = "ERROR: wrong input: " + arg
+            break
+            
+        i += 1
+        
+    if state == State.ERROR:
+        return state
+        
+    if not profileFound:
+        ERROR = "ERROR: No profile entered"
+        return State.ERROR
+        
+    if state == State.NONE:#fill for today
+        return State.ONE_DATE
+        
+    firstDate = getDate(wtr_date)
+    secondDate = getDate(wtr_secondDate)
+    
+    if state == State.DATES:
+        if '-start' in keySet:
+            if '-end' in keySet:
+                if secondDate == firstDate:#start day = end day => one date
+                    state = State.ONE_DATE
+                elif (firstDate - secondDate).days > 0:
+                    state = State.ERROR
+                    ERROR = "ERROR: start date is greater than second"
+                #else second date is greater than the first and state stays
+                #equal to State.DATES
+
+            else:#only start date entered 
+                state = State.ONE_DATE
+        elif '-end' in keySet:#start date is today
+            if secondDate == firstDate:#the same as -start and -end
+                    state = State.ONE_DATE
+            elif (firstDate - secondDate).days > 0:
+                state = State.ERROR
+                ERROR = "ERROR: start date is greater than second"
+        else:
+            state = State.ERROR
+            ERROR = "ERROR: unexpected error (state = State.DATES but no dates found)"
+    elif state == State.RELATIVE:
+        if len(keySet.intersection(Set(['-c', '-p', '-n']))) == 0:
+            state = State.ERROR
+            ERROR = "ERROR: unexpected error (state = State.RELATIVE but no keys found)"
+    
+    return state
  
 def dateMatch(date):
 	if re.match("^201\d-[01]\d-[0123]\d$", date):
-   		print "date ok"
+   		#print "date ok"
    		return True
 	else:
 		return False
@@ -39,25 +220,6 @@ def setSelectControl(browser, controlId, value):
                 break
 
     return valId;
-    
-'''def setSelectForWeekly(browser, controlId, value):#!!not finished
-	valId = -2
-	control = browser.form.find_control(name = controlId, nr = 0)
-	#print("searching for: ", controlId)
-	for control in browser.form.controls:
-		if control.name == controlId and control.type == "select":
-			#print("found: ", control.name)
-			for item in control.items:
-				for label in item.get_labels():
-					#print("\tvalues: ", label)
-					if label.text == value:
-						valId = item.name
-						#print "Found controlId %s with id %s" % (label.text, valId)
-						browser.form[controlId] = [valId]
-						break
-		break
-		
-	return valId;'''
 
 def login(browser,url,name,psw):
     browser.open(url)
@@ -77,15 +239,14 @@ def loginPL(browser,url,name,psw):
     control.value = psw
     return browser.submit();
 
-def findProfile(argNum):#if profile with name in 'sys.argv[argNum]' exists,
-						#set sys.argv[argNum] to profile's full path and return True
+def findProfile(profile):#if profile with name in 'sys.argv[argNum]' exists,
+						#set wtr_profile to profile's full path and return True
 						#else return False
-	profileName = sys.argv[argNum]
 	
-	if os.path.exists(profileName):
-		return True
+	if os.path.exists(profile):
+		return profile
 		
-	profileName = os.path.basename(profileName)
+	profile = os.path.basename(profile)
 	dirName = os.path.abspath(sys.argv[0])
 	profPath = dirName
 	prevLen = 0
@@ -93,67 +254,59 @@ def findProfile(argNum):#if profile with name in 'sys.argv[argNum]' exists,
 	while len(dirName) != prevLen:
 		prevLen = len(dirName)
 		dirName = os.path.dirname(dirName)
-		profPath = os.path.join(dirName, os.path.join('profiles', profileName))
+		profPath = os.path.join(dirName, os.path.join('profiles', profile))#Searching for the profile in dir profiles
 		if os.path.exists(profPath):
-			sys.argv[argNum] = profPath
-			return True
+			return profPath
 		else:
-			profPath = os.path.join(dirName, profileName)
+			profPath = os.path.join(dirName, profile)#Else in the upper dir
 			if os.path.exists(profPath):
-				sys.argv[argNum] = profPath
-				return True
+				return profPath
 				
 	
-	return False
+	return ""
 	
-
-def parseArgs(nextArg):
-	if len(sys.argv) < (nextArg + 1):
-		raise "ERROR: lack of arguments"
-
-	if dateMatch(sys.argv[nextArg]):
-		if dateMatch(sys.argv[nextArg + 1]):
-			if len(sys.argv) < (nextArg + 2):
-				exit("ERROR: lack of arguments(no profile path)")
-			elif findProfile(nextArg + 2):
-				return "period"
-			else:
-				exit("ERROR: wrong profile path in argument number {0}".format(nextArg + 1))
-		elif findProfile(nextArg + 1):
-			return "one day"
-	else:
-		exit("ERROR: in argument number {0}".format(nextArg - 1))
-
 def createTask(browser, task):
 	
 	levelList = "taskLevelList[{0}]."
 	level = 0
+	levelZeroCleared = False
+	newReport = browser.form["newWeeklyReport"] #'true' if report is newly created
 	
 	while True:
 		try:
 			control = browser.form.find_control((levelList + "taskId").format(level), nr = 0)
 			projectControl = browser.form.find_control((levelList + "projectId").format(level), nr = 1)
-			if projectControl.value == "-1":
+			if projectControl.value == "-1" or newReport == "true":
 				if level == 0:
-					clearTask(browser, level)
+					if not clearTask(browser, level):
+						exit("Couldn't clearTask")
+					levelZeroCleared = True	
+					
 				else:
 					removeTask(browser, level)
 					level -= 1
 		except:
 			break
-			
 		level += 1
+	
+	if levelZeroCleared:
+		return 0
 		
-	control = browser.form.find_control("act")
-	control.readonly = False
-	browser.form['act'] = '1'
+	else:
+		control = browser.form.find_control("act")
+		control.readonly = False
+		browser.form['act'] = '1'
 	
-	control = browser.form.find_control("task")
-	control.readonly = False
-	browser.form['task'] = str(level)
-	
-	browser.submit()
-	return level
+		control = browser.form.find_control("task")
+		control.readonly = False
+		browser.form['task'] = str(level)
+		browser.submit()
+		
+		browser.form = list(browser.forms())[0]
+		
+		clearTask(browser, level)
+		
+		return level
 
 def removeTask(browser, task):
 
@@ -177,12 +330,17 @@ def clearTask(browser, task):
 	try:
 		for dayInd in range(0, 7):
 			current = field.format(dayInd)
-			control = browser.form.find_control(current + "factorId", nr = 0)
+			factorId = browser.form.find_control(current + "factorId", nr = 0)
 			
-			if control.value != "-1":
+			if factorId.value != "-1" and factorId.value != "107":#107 - Day off
+				
 				wtr_factor_id = setSelectControl(browser, current.format(dayInd) + "factorId", "none")
 				if wtr_factor_id == -2:
 					exit("factor not found")
+				
+				factorId_old = browser.form.find_control(current + "factorId_old", nr = 0)
+				factorId_old.readonly = False
+				factorId_old.value = "none"
 				
 				browser.form[current.format(dayInd) + "hours"] = "0.0"
 		
@@ -193,7 +351,10 @@ def clearTask(browser, task):
 				browser.form[current.format(dayInd) + "comment"] = ""
 				
 	except Exception, e:
-		print str(e)
+		#print "EXCEPTION(clearTask): ", str(e)
+		return False
+		
+	return True
 
 def loadProject(browser, idx, level):
 	
@@ -227,13 +388,18 @@ def loadTask(browser, idx, level):
 def formChanged(browser):
 	control = browser.form.find_control("formChanged")
 	control.readonly = False
-	browser.form['formChanged'] = 'true'	
-
-
+	browser.form['formChanged'] = 'true'
+	
+def isDayOff(dayNumber):#saturday and sunday
+	if dayNumber >= 6:
+		return True
+	else: return False
+	
+###Fill form
 def fillOneDayForm(browser):
 	browser.select_form(name="editDailyReportForm")
 
-	wtr_location_id = setSelectControl(browser,'reportUnits[0].locationId',wtr_location)
+	wtr_location_id = setSelectControl(browser, 'reportUnits[0].locationId', wtr_location)
 	if wtr_location_id == -2:
 		exit("Location not found")
 
@@ -270,20 +436,18 @@ def fillOneDayForm(browser):
 
 	browser.form['reportUnits[0].comment'] = wtr_comment
 
-def fillFewDayReport(browser):
+#week form
+def fillFewDayReport(browser, firstReportDay, lastReportDay):
 
 	browser.select_form(name = "editWeeklyReportForm")
 
 	level = createTask(browser, wtr_task)
 	field = "taskLevelList[%d]." % (level)
 	
-	firstReportDay = getDate(wtr_date)
-	lastReportDay = getDate(wtr_secondDate)
-	
-	firstDayOfWeek = firstReportDay - timedelta(days = (firstReportDay.isocalendar()[2] - 1))
+	#print firstReportDay ," : ", lastReportDay, "\n"
 	
 	dif = dateDif(firstReportDay, lastReportDay)
-	dayNumber = firstReportDay.isocalendar()[2] - 1
+	dayNumber = firstReportDay.isocalendar()[2] - 1#numeration from 0
 	
 	browser.form = list(browser.forms())[0]
 	browser.set_all_readonly(False)
@@ -316,63 +480,144 @@ def fillFewDayReport(browser):
 			
 	field += "daysDetails[{0}].dailyHoursList[0]."
 	
+	print "dif = ", dif, "\n"
+	
+	dayOffs = 0
 	while dif != 0:
-		browser.form[field.format(dayNumber) + "hours"] = wtr_hours
+		if (isDayOff(dayNumber + 1) and AutoDayOFF):#needs to be filled in another task
+			print "it is a day off: ", dayNumber + 1, "\n"
+			dayOffs += 1
+		else:
+			print "it is a usual day:", dayNumber + 1, "\n"
+			try:
+				browser.form[field.format(dayNumber) + "hours"] = wtr_hours
 		
-		browser.form[field.format(dayNumber) + "workUnits"] = wtr_units
+				unitsCtrl = browser.form.find_control(field.format(dayNumber) + "workUnits")
+				unitsCtrl.readonly = False
+				browser.form[field.format(dayNumber) + "workUnits"] = wtr_units
 
-		wtr_factor_id = setSelectControl(browser, field.format(dayNumber) + "factorId", wtr_factor)
-		if wtr_factor_id == -2:
-			exit("factor not found")
+				wtr_factor_id = setSelectControl(browser, field.format(dayNumber) + "factorId", wtr_factor)
+				if wtr_factor_id == -2:
+					exit("factor not found")
 
-		browser.form[field.format(dayNumber) + "comment"] = wtr_comment
-		
+				browser.form[field.format(dayNumber) + "comment"] = wtr_comment
+			except:#this day is registered
+				print dayNumber + 1," is registered"
+				#go to the next day
+				
 		dayNumber += 1
 		dif -= 1
-		print("NEXT DAY------\n\n")
-	
+		
+	if AutoDayOFF:
+		dayNumber = 5 #6th day of week
+		while dayOffs > 0:
+			print "fill a day off: ", dayNumber + 1, "\n"
+			try:
+				hoursCtrl = browser.form.find_control(field.format(dayNumber) + "hours")
+				hoursCtrl.readonly = False
+				browser.form[field.format(dayNumber) + "hours"] = "0.0"
+			
+				unitsCtrl = browser.form.find_control(field.format(dayNumber) + "workUnits")
+				unitsCtrl.readonly = False
+				browser.form[field.format(dayNumber) + "workUnits"] = "0.0"
+
+				wtr_factor_id = setSelectControl(browser, field.format(dayNumber) + "factorId", wtr_dayOffFactor)
+				if wtr_factor_id == -2:
+					exit("factor not found")
+
+				browser.form[field.format(dayNumber) + "comment"] = ""
+			except:#this day is registered
+				print dayNumber + 1," is registered"
+				#go to the next day
+		
+			dayNumber += 1
+			dayOffs -= 1
+			
+		
+			
+###----------------------------------
+
+###Register day
 def storeAsPrivate_Day(browser):
 	fillOneDayForm(browser)
 
-	control = browser.form.find_control("act")
-	control.readonly = False
-	browser.form['act'] = '5'# store as private
+	return submitDayForm(browser, '5')
 
-	response = browser.submit()
-
-def registerOneDayReport(browser):
+def register_Day(browser):
 	fillOneDayForm(browser)
 
-	control = browser.form.find_control("act")
-	control.readonly = False
-	browser.form['act'] = '6'# register
+	return submitDayForm(browser, '6')
+###-------------------
 
-	response = browser.submit()
+def getFirstDay(week):
+	return datetime.strptime(week + '-1', "%Y-W%W-%w").date()
+	
+def getLastDay(week):
+	return datetime.strptime(week + '-0', "%Y-W%W-%w").date()
 
+def submitDayForm(browser, action):
+	if not action in ['6','5']:
+		ERROR = "ERROR: wrong action"
+		return False
+	else:
+		control = browser.form.find_control("act")
+		control.readonly = False
+		browser.form['act'] = action
+
+		response = browser.submit()
+		return True
+		
+###Register few days
+def storeAsPrivate_Week(browser, firstDay, lastDay):
+		
+	fillFewDayReport(browser, firstDay, lastDay)
+	
+	submitWeekForm(browser, '4')
+
+def register_Week(browser, firstDay, lastDay):
+		
+	fillFewDayReport(browser, firstDay, lastDay)	
+	
+	submitWeekForm(browser, '5')
+	
+def	register_Week(browser, week):
+	
+	firstDay = getFirstDay(week)
+	lastDay = getLastDay(week)
+	
+	fillFewDayReport(browser, firstDay, lastDay)	
+	
+	submitWeekForm(browser, '5')
+	
+def storeAsPrivate_Week(browser, week):
+	firstDay = getFirstDay(week)
+	lastDay = getLastDay(week)
+	
+	#print '\t', firstDay, " : ", lastDay
+		
+	fillFewDayReport(browser, firstDay, lastDay)
+	
+	submitWeekForm(browser, '4')
+
+	
+def submitWeekForm(browser, action):
+	if not action in ['4','5']:
+		ERROR = "ERROR: wrong action"
+		return False
+	else:
+		control = browser.form.find_control("act")
+		control.readonly = False
+		browser.form['act'] = action
+		response = browser.submit()
+		return True
+		
+###-------------------------------		
 def getWeek(someDate):
 	return someDate.isocalendar()[1]
 	
-def storeAsPrivate_Week(browser, firstDay, lastDay):
-		
-	fillFewDayReport(browser)	
-	
-	control = browser.form.find_control("act")
-	control.readonly = False
-	browser.form['act'] = '4'# store as private
-
-	response = browser.submit()
-
-def registerFewDayReport(browser, firstDay, lastDay):
-		
-	fillFewDayReport(browser)	
-	
-	control = browser.form.find_control("act")
-	control.readonly = False
-	browser.form['act'] = '5'# register
-
-	response = browser.submit()
-
+###Open day form
 def openDayForm(browser, page):
+	global ERROR
 	browser.open(page)
 	browser.select_form(name="myWeekReportsForm")
 	browser.form['editDayDate'] = wtr_date
@@ -381,26 +626,40 @@ def openDayForm(browser, page):
 	browser.form['act'] = '1'
 	browser.submit()
 
+	browser.form = list(browser.forms())[0]
+	
 	if browser.title() != "Edit Daily Report":
 		exit('Unable to open "Edit Daily Report" page')
+	elif browser.form['state'] != 'REGISTERED':
+		return True
+	else:
+		ERROR = wtr_date + " is already registered"
+		return False
+###--------------------------
 
+###Open week form
 def openWeekForm(browser, page, firstDay, lastDay):
 	dif = dateDif(firstDay, lastDay)
 
-	if dif > 7:
-		exit("Too mutch days")
+	weekDay = firstDay.isocalendar()[2]
+
+	if (dif + weekDay - 1) > 7:
+		exit("ERROR: wrong dates(corrupts two weeks)")
 	elif dif <= 0:
-		print "First date is later or equls than second date",
-		print "First date changed with the second"
-		wtr_date = wtr_secondDate
+		exit("ERROR: start date is greater than second date")
 	
 	week = getWeek(firstDay)
 
 	wtr_week = "%d-W%d" % (firstDay.year, week)
 
+	return openWeekForm(browser, page, wtr_week)
+
+def openWeekForm(browser, page, week):
+	global ERROR
+
 	browser.open(page)
 	browser.select_form(name = "myWeekReportsForm")
-	browser.form['editWeekDate'] = wtr_week
+	browser.form['editWeekDate'] = week
 
 	control = browser.form.find_control("act")
 	control.readonly = False
@@ -408,31 +667,24 @@ def openWeekForm(browser, page, firstDay, lastDay):
 	
 	control = browser.form.find_control("weekDetails")
 	control.readonly = False
-	browser.form['weekDetails'] = wtr_week
+	browser.form['weekDetails'] = week
 
 	browser.submit()
-
+	
+	browser.form = list(browser.forms())[0];
+	
 	if browser.title() != "Edit weekly report":
 		exit('Unable to open "Edit weekly report" page')
-
-
-def storeAsPrivateConfirm(browser):
+	elif browser.form["toRegister"] == 'true':
+		return True
+	else:
+		ERROR = week + "is already registered"
+		return False
+	
+###------------------------------
+	
+def confirm(browser):
 	if browser.title() != "Confirmation page":
-		#print response.read()
-		exit("Confirm failed(on store as private)")
-	
-	browser.select_form(name = "confirmationStorRegDailyReportForm")
-	
-	control = browser.form.find_control("act")
-	control.readonly = False
-	browser.form['act'] = '1'# confirm
-	
-	response = browser.submit()
-	webbrowser.open(browser.geturl())
-	
-def Confirm(browser):
-	if browser.title() != "Confirmation page":
-		#print response.read()
 		exit("Confirm failed(on store as private)")
 	
 	browser.select_form(name = "confirmationStorRegDailyReportForm")
@@ -449,10 +701,6 @@ def dateDif(first, second):
 def getDate(date):
 	return datetime.strptime(date, "%Y-%m-%d").date()
 
-#try:
-#    from BeautifulSoup import BeautifulSoup
-#except ImportError:
-#    from bs4 import BeautifulSoup
 
 #### default values
 #should be overwritten by profile
@@ -465,22 +713,30 @@ wtr_hours = "8"
 wtr_units = "0"
 wtr_factor = "Standard"
 wtr_comment = ""
-wtr_date = '2016-07-28'
-wtr_secondDate = '2016-07-29'
-wtr_week = '2016-W34'
+#
+wtr_dayOffFactor = "Day Off"
+#
+currentDate = datetime.now()
+wtr_date = currentDate.strftime("%Y-%m-%d")#initialize it with todays date
+wtr_secondDate = currentDate.strftime("%Y-%m-%d")#initialize it with todays date
+wtr_week = '%d-W%d' % (currentDate.year, currentDate.isocalendar()[1])#initialize it with current year and week
+wtr_profile = ""
+Weeks = []
+keySet = Set()
+ERROR = ""
+AutoDayOFF = True
 
-
-if len(sys.argv) < 3:
-   exit("lack of arguments( < 2)")
+registerDay = storeAsPrivate_Day
+registerWeek = storeAsPrivate_Week
    
 if(include(os.path.join(os.path.dirname(sys.argv[0]), "login.py")) == False):
-	exit("No login and password(file 'login.py'))")#login and password
+	exit("ERROR: No login and password(file 'login.py' must be in the same directory))")#login and password
 
 br = mechanize.Browser()
 br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 5.2; WOW64) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.47 Safari/536.11')]
 
-brPL = mechanize.Browser()
-brPL.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 5.2; WOW64) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.47 Safari/536.11')]
+#brPL = mechanize.Browser()
+#brPL.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 5.2; WOW64) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.47 Safari/536.11')]
 ###### LOGIN ########
 
 login(br,"https://websession-wcf.office.int/?ReturnUrl=http://wtr-epby.office.int/worktimereport/myweekreports.do#", wtr_login, wtr_password)
@@ -490,57 +746,95 @@ if strTitle != "My weekly reports":
     exit("Login failed")
 
 # for PL version
-loginPL(brPL,"http://epol.ericpol.int:8080/websession/login?redir=http://wtr.ericpol.int:8080/worktimereport/", wtr_login, wtr_password)
+'''loginPL(brPL,"http://epol.ericpol.int:8080/websession/login?redir=http://wtr.ericpol.int:8080/worktimereport/", wtr_login, wtr_password)
 
 strTitle = brPL.title()
 if strTitle != "My weekly reports":
-    exit("LoginPL failed")
+    exit("LoginPL failed")'''
 
+state = parseArgs(sys.argv[1:])
+if state == State.ERROR:
+	exit(ERROR)
+	
+elif state == State.ONE_DATE:
+	if include(wtr_profile) == False:
+		exit("ERROR: Unable to include profile")
+		
+	print "one day report: ", wtr_date
+	
+	if openDayForm(br,"http://wtr-epby.office.int/worktimereport/"):
+		registerDay(br)
+	else:
+		print ERROR
 
-print 'Number of arguments:', len(sys.argv), 'arguments.'
-nextArg = 1
-while nextArg < len(sys.argv):
-	argsType = parseArgs(nextArg)
-	if argsType == "one day":
-		print "one day report: ", sys.argv[1]
-		wtr_date = sys.argv[nextArg]
-		if include(sys.argv[nextArg + 1]) == False:
-			exit("EXIT: Unable to include profile")
-		
-		openDayForm(br,"http://wtr-epby.office.int/worktimereport/")
-		storeAsPrivate_Day(br)
+	'''if openDayForm(brPL,"http://wtr.ericpol.int:8080/worktimereport/myweekreports.do"):
+		registerDay(brPL)
+	else:
+		print ERROR'''
+	
+	#confirm(br)
+	#confirm(brPL)
 
-		openDayForm(brPL,"http://wtr.ericpol.int:8080/worktimereport/myweekreports.do")
-		storeAsPrivate_Day(brPL)
-		
-		Confirm(br)
-		Confirm(brPL)
-		
-		nextArg = nextArg + 2
+elif state == State.DATES:
+	print "Filling report for period: {0} - {1}".format(wtr_date, wtr_secondDate)
+	if include(wtr_profile) == False:
+		exit("ERROR: Unable to include profile")
+	
+	print "wtr.by\n....."
+	if openWeekForm(br,"http://wtr-epby.office.int/worktimereport/", getDate(wtr_date), getDate(wtr_secondDate)):
+		registerWeek(br, wtr_date, wtr_secondDate)
+	else:
+		print ERROR
+	print "wtr.by done"
+	
+	'''print "wtr.pl\n....."
+	if openWeekForm(brPL,"http://wtr.ericpol.int:8080/worktimereport/index.do", getDate(wtr_date), getDate(wtr_secondDate)):
+		registerWeek(brPL, wtr_date, wtr_secondDate)
+	else:
+		print ERROR
+	print "wtr.pl done"'''
+	
+	#confirm(br)
+	#confirm(brPL)
 
-	elif argsType == "period":
-		print "Filling report for period: {0} - {1}".format(sys.argv[nextArg], sys.argv[nextArg + 1])
-		wtr_date = sys.argv[nextArg]
-		wtr_secondDate = sys.argv[nextArg + 1]
-		if include(sys.argv[nextArg + 2]) == False:
-			exit("EXIT: Unable to include profile")
-		
-		print "wtr.by"
-		openWeekForm(br,"http://wtr-epby.office.int/worktimereport/", getDate(wtr_date), getDate(wtr_secondDate))
-		storeAsPrivate_Week(br, wtr_date, wtr_secondDate)
+elif state == State.RELATIVE:
+	print "Filling report for weeks: ", Weeks
+	if include(wtr_profile) == False:
+		exit("EXIT: Unable to include profile")
+	
+	for week in Weeks:
+		print "wtr.by\n....."
+		if openWeekForm(br,"http://wtr-epby.office.int/worktimereport/", week):
+			registerWeek(br, week)
+		else:
+			print ERROR
 		print "wtr.by done"
-		
-		print "wtr.pl"
-		openWeekForm(brPL,"http://wtr.ericpol.int:8080/worktimereport/index.do", getDate(wtr_date), getDate(wtr_secondDate))
-		storeAsPrivate_Week(brPL, wtr_date, wtr_secondDate)
-		print "wtr.pl done"
-		
-		Confirm(br)
-		Confirm(brPL)
 
-		nextArg = nextArg + 3
+		'''print "wtr.pl\n....."
+		if openWeekForm(brPL,"http://wtr.ericpol.int:8080/worktimereport/index.do", week):
+			registerWeek(brPL, week)
+		else:
+			print ERROR
+		print "wtr.pl done"'''
 		
-	print("nextArg = ", nextArg)
-	raw_input("Press Enter to continue")
+		#confirm(br)
+		#confirm(brPL)
 
 exit("All done")
+
+
+
+##############
+'''def storeAsPrivateConfirm(browser):
+	if browser.title() != "Confirmation page":
+		#print response.read()
+		exit("Confirm failed(on store as private)")
+	
+	browser.select_form(name = "confirmationStorRegDailyReportForm")
+	
+	control = browser.form.find_control("act")
+	control.readonly = False
+	browser.form['act'] = '1'# confirm
+	
+	response = browser.submit()
+	webbrowser.open(browser.geturl())'''
