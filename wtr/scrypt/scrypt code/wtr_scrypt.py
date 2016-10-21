@@ -296,7 +296,8 @@ def setSelectControl(browser, controlId, value):
 def login(browser,url,name,psw):
 	browser.open(url)
 	browser.form = list(browser.forms())[0]  # use when form is unnamed
-	control = browser.form.find_control("UserName")
+	control = browser.form.find_control("UserName"py_compile.compile('/home/emergency/Downloads/wtr_scrypt-1.0/wtr/scrypt/scrypt code/wtr_scrypt.pDDD
+)
 	control.value = name
 	control = browser.form.find_control("Password")
 	control.value = psw
@@ -847,8 +848,8 @@ if(include(os.path.join(os.path.dirname(sys.argv[0]), "login.py")) == False):
 br = mechanize.Browser()
 br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 5.2; WOW64) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.47 Safari/536.11')]
 
-#brPL = mechanize.Browser()
-#brPL.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 5.2; WOW64) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.47 Safari/536.11')]
+brPL = mechanize.Browser()
+brPL.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 5.2; WOW64) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.47 Safari/536.11')]
 ###### LOGIN ########
 
 login(br,"https://websession-wcf.office.int/?ReturnUrl=http://wtr-epby.office.int/worktimereport/myweekreports.do#", wtr_login, wtr_password)
@@ -858,11 +859,11 @@ if strTitle != "My weekly reports":
 	exit("Login failed")
 
 # for PL version
-'''loginPL(brPL,"http://epol.ericpol.int:8080/websession/login?redir=http://wtr.ericpol.int:8080/worktimereport/", wtr_login, wtr_password)
+loginPL(brPL,"http://epol.ericpol.int:8080/websession/login?redir=http://wtr.ericpol.int:8080/worktimereport/", wtr_login, wtr_password)
 
 strTitle = brPL.title()
 if strTitle != "My weekly reports":
-	exit("LoginPL failed")'''
+	exit("LoginPL failed")
 
 state = parseArgs(sys.argv[1:])
 if state == State.ERROR:
