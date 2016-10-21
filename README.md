@@ -25,10 +25,16 @@ how to run
 
    [-register] key means that report will be registered instead of store as private
 	   Be accurate with this key as it gives you no possibility to check correctness of inserted data
- 6. Examples:
+
+6.Examples:
+
 	EXAMPLE 1: bashscrypt.sh -start 2016-09-01 -end 2016-09-03  -profile profile_usual_day.py
+	
 	EXAMPLE 2: bashscrypt.sh -c -profile profile_usual_day.py
+	
 	EXAMPLE 3: bashscrypt.sh -profile profile_usual_day.py -c -p -n -register
+	
 	EXAMPLE 4: bashscrypt.sh -week 45 -p -c -profile profile_usual_day.py
+	
 
 I am not sure if this is more convinient for you but you can at least try.
