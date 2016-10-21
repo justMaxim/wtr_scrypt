@@ -2,7 +2,7 @@
 
 how to run
 
-1. Download the latest release. 
+1. Download the latest release   https://github.com/justMaxim/wtr_scrypt/releases/latest  
 2. Download some profile and edit it coresponding to your requirements(wtr/profiles/...).
 3. Enter your login and password in file login.py(wtr/scrypt/login.py)!
 4. Run bashscrypt(wtr/scrypt/<bashscrypt_name>.sh) in the terminal.
