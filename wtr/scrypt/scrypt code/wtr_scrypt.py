@@ -315,6 +315,10 @@ def findProfile(profile):#if profile with name in 'sys.argv[argNum]' exists,
 						#set wtr_profile to profile's full path and return True
 						#else return False
 	
+	if not re.match("^.*\.py$", profile):
+		profile += '.py'
+		print profile
+	
 	if os.path.exists(profile):
 		return profile
 		
@@ -843,8 +847,8 @@ if(include(os.path.join(os.path.dirname(sys.argv[0]), "login.py")) == False):
 br = mechanize.Browser()
 br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 5.2; WOW64) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.47 Safari/536.11')]
 
-brPL = mechanize.Browser()
-brPL.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 5.2; WOW64) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.47 Safari/536.11')]
+#brPL = mechanize.Browser()
+#brPL.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 5.2; WOW64) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.47 Safari/536.11')]
 ###### LOGIN ########
 
 login(br,"https://websession-wcf.office.int/?ReturnUrl=http://wtr-epby.office.int/worktimereport/myweekreports.do#", wtr_login, wtr_password)
@@ -854,11 +858,11 @@ if strTitle != "My weekly reports":
 	exit("Login failed")
 
 # for PL version
-loginPL(brPL,"http://epol.ericpol.int:8080/websession/login?redir=http://wtr.ericpol.int:8080/worktimereport/", wtr_login, wtr_password)
+'''loginPL(brPL,"http://epol.ericpol.int:8080/websession/login?redir=http://wtr.ericpol.int:8080/worktimereport/", wtr_login, wtr_password)
 
 strTitle = brPL.title()
 if strTitle != "My weekly reports":
-	exit("LoginPL failed")
+	exit("LoginPL failed")'''
 
 state = parseArgs(sys.argv[1:])
 if state == State.ERROR:
@@ -945,7 +949,7 @@ elif state == State.WEEKS:
 			exit(ERROR)
 		else:
 			print ERROR
-		#print "wtr.pl done"'''
+		#print "wtr.pl done"
 		
 		confirm(br)
 		confirm(brPL)
