@@ -109,7 +109,7 @@ def parseArgs(args):#return State
 				i += 1
 			else:
 				state = State.ERROR
-				ERROR = "ERROR: -start and -end must me followed by date"
+				ERROR = "ERROR: {1} and {2} must be followed by date".format(Keys.START_DAY, Keys.END_DAY)
 				break
 				
 			keySet.add(arg)
@@ -235,8 +235,8 @@ def parseArgs(args):#return State
 	secondDate = getDate(wtr_secondDate)
 	
 	if state == State.DATES:
-		if '-start' in keySet:
-			if '-end' in keySet:
+		if Keys.START_DAY in keySet:
+			if Keys.END_DAY in keySet:
 				if secondDate == firstDate:#start day = end day => one date
 					state = State.ONE_DATE
 				elif (firstDate - secondDate).days > 0:
@@ -247,7 +247,7 @@ def parseArgs(args):#return State
 
 			else:#only start date entered 
 				state = State.ONE_DATE
-		elif '-end' in keySet:#start date is today
+		elif Keys.END_DAY in keySet:#start date is today
 			if secondDate == firstDate:#the same as -start and -end
 					state = State.ONE_DATE
 			elif (firstDate - secondDate).days > 0:
@@ -296,8 +296,7 @@ def setSelectControl(browser, controlId, value):
 def login(browser,url,name,psw):
 	browser.open(url)
 	browser.form = list(browser.forms())[0]  # use when form is unnamed
-	control = browser.form.find_control("UserName"py_compile.compile('/home/emergency/Downloads/wtr_scrypt-1.0/wtr/scrypt/scrypt code/wtr_scrypt.pDDD
-)
+	control = browser.form.find_control("UserName")
 	control.value = name
 	control = browser.form.find_control("Password")
 	control.value = psw
@@ -863,6 +862,7 @@ loginPL(brPL,"http://epol.ericpol.int:8080/websession/login?redir=http://wtr.eri
 
 strTitle = brPL.title()
 if strTitle != "My weekly reports":
+	print strTitle
 	exit("LoginPL failed")
 
 state = parseArgs(sys.argv[1:])
